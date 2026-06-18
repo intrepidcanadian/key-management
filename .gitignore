@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.log
+
+# Local vault data — never commit secrets or the encrypted store
+*.sqlite
+*.sqlite-journal
+*.db
+keyvault.data/
+.env
+.env.*
+!.env.example

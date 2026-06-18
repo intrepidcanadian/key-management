@@ -1,0 +1,35 @@
+{
+  "name": "keyvault",
+  "version": "0.1.0",
+  "description": "Revocable, shareable API-key access for agents and humans",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "keyvault": "./dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "cli": "tsx src/cli/index.ts",
+    "proxy": "tsx src/proxy/server.ts",
+    "db:init": "tsx src/store/init.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "@noble/ciphers": "^1.0.0",
+    "better-sqlite3": "^11.7.0",
+    "commander": "^12.1.0",
+    "drizzle-orm": "^0.38.2",
+    "hono": "^4.6.14"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
