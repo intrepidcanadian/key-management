@@ -1,0 +1,13 @@
+{
+  "_comment": "Copy to ~/.keyvault/mcp.json. Each connection is a grant token minted in the dashboard or CLI (keyvault share --as agent). One MCP install can reach all of them; revoke a grant to cut off that connection everywhere.",
+  "connections": {
+    "qwen": {
+      "baseUrl": "http://localhost:8787/qwen",
+      "token": "gv_replace_with_your_grant_token"
+    },
+    "openai": {
+      "baseUrl": "http://localhost:8787/openai",
+      "token": "gv_replace_with_your_grant_token"
+    }
+  }
+}

@@ -75,6 +75,10 @@ program
     if (provider.kind === "llm") {
       console.log(`  e.g. OPENAI_BASE_URL=${base}  OPENAI_API_KEY=${token}`);
     }
+    if (opts.as !== "human") {
+      console.log(`\n  add to ~/.keyvault/mcp.json under "connections":`);
+      console.log(`    "${key.provider}": { "baseUrl": "${base}", "token": "${token}" }`);
+    }
   });
 
 program
