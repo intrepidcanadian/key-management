@@ -47,6 +47,30 @@ export function listKeys(db: DB): KeyRow[] {
   return db.select().from(keys).all();
 }
 
+/**
+ * Rotate the secret behind a key in place. Grants reference key_id, not the secret,
+ * so every live grant keeps working with zero downtime. Returns false if no such key.
+ */
+export function rotateKey(
+  db: DB,
+  keyId: string,
+  newPlaintext: string,
+  masterKey: Uint8Array,
+): boolean {
+  const sealed = sealApiKey(newPlaintext, masterKey);
+  const res = db
+    .update(keys)
+    .set({
+      ciphertext: b64(sealed.ciphertext),
+      nonce: b64(sealed.nonce),
+      wrappedDek: b64(sealed.wrappedDek),
+      rotatedAt: Date.now(),
+    })
+    .where(eq(keys.id, keyId))
+    .run();
+  return res.changes > 0;
+}
+
 export function sealedFromRow(row: KeyRow): SealedKey {
   return {
     ciphertext: unb64(row.ciphertext),
@@ -61,6 +85,7 @@ export interface GrantInput {
   granteeType: "agent" | "human";
   scope: unknown;
   spendCapCents?: number;
+  rateLimitPerMin?: number;
   expiresAt?: number | null;
 }
 
@@ -80,6 +105,7 @@ export function createGrant(db: DB, input: GrantInput): GrantCreated {
     scopeJson: JSON.stringify(input.scope),
     spendCapCents: input.spendCapCents ?? null,
     spentCents: 0,
+    rateLimitPerMin: input.rateLimitPerMin ?? null,
     expiresAt: input.expiresAt ?? null,
     revokedAt: null,
     createdAt: Date.now(),

@@ -20,11 +20,13 @@ Built and tested (54 tests):
 - **`proxy/`** — Hono proxy: token → grant → live? → scope → spend → decrypt → forward → audit.
 - **`pricing/`** — usage-based spend accounting (OpenAI + Anthropic, streaming + not);
   the spend cap is enforced and charged. Usage-less calls charge a fallback, never 0.
-- **`cli/`** — `add-key`, `share`, `revoke`, `list`, `audit`.
+- **`ratelimit/`** — per-grant token-bucket rate limiting (bounds a leaked token on
+  no-cost APIs); `--rate` on share.
+- **`cli/`** — `add-key`, `share`, `rotate`, `revoke`, `list`, `audit`.
 - **`mcp/`** — agent surface: a stdio MCP server that's a thin client of the proxy.
 
 Deferred: hosted multi-tenant + non-dev web console, cloud KMS (`KmsWrapper`),
-per-grant rate limiting, key rotation. See the design doc and `TODOS.md`.
+shared rate-limit state for multi-instance, live-LLM e2e test. See the design doc and `TODOS.md`.
 
 ## Quickstart
 
@@ -46,7 +48,11 @@ npm run proxy                 # start the proxy on :8787
 
 npm run cli -- revoke <grantId|token>   # kill switch
 npm run cli -- audit <grantId>          # what they did (with per-call cost)
+
+echo -n 'sk-new' | npm run cli -- rotate <keyId>   # swap the secret, grants keep working
 ```
+
+Add `--rate <n>` to `share` to cap a grant at N requests/minute.
 
 ### Agent access (MCP)
 

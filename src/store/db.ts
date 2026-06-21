@@ -59,9 +59,10 @@ export function initSchema(raw: Database.Database): void {
       grantee_type    TEXT NOT NULL,
       token_hash      TEXT NOT NULL UNIQUE,
       scope_json      TEXT NOT NULL,
-      spend_cap_cents INTEGER,
-      spent_cents     REAL NOT NULL DEFAULT 0,
-      expires_at      INTEGER,
+      spend_cap_cents     INTEGER,
+      spent_cents         REAL NOT NULL DEFAULT 0,
+      rate_limit_per_min  INTEGER,
+      expires_at          INTEGER,
       revoked_at      INTEGER,
       created_at      INTEGER NOT NULL
     );

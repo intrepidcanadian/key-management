@@ -15,6 +15,7 @@ import { getProvider } from "../providers.js";
 import { RestMatcher, type RestScope } from "../scope/rest.js";
 import { LlmMatcher, checkSpend, type LlmScope } from "../scope/llm.js";
 import { accountCost } from "../pricing.js";
+import { RateLimiter } from "../ratelimit.js";
 
 const restMatcher = new RestMatcher();
 const llmMatcher = new LlmMatcher();
@@ -32,6 +33,7 @@ const STRIP = new Set(["host", "connection", "content-length", "authorization"])
  */
 export function createApp(db: DB, wrapper: KeyWrapper): Hono {
   const app = new Hono();
+  const limiter = new RateLimiter(); // per-process; hosted needs shared state (TODOS)
 
   app.get("/healthz", (c) => c.json({ ok: true }));
 
@@ -80,6 +82,11 @@ export function createApp(db: DB, wrapper: KeyWrapper): Hono {
     } else {
       const dec = restMatcher.matches({ method, path: upstreamPath }, scope as RestScope);
       if (!dec.allow) return c.json({ error: `scope denied: ${dec.reason}` }, 403);
+    }
+
+    // ---- rate-limit gate (bounds a leaked token on no-cost APIs) ----
+    if (grant.rateLimitPerMin && !limiter.tryConsume(grant.id, grant.rateLimitPerMin)) {
+      return c.json({ error: "rate limit exceeded" }, 429);
     }
 
     // ---- inject real key (in memory only) ----

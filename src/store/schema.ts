@@ -34,6 +34,7 @@ export const grants = sqliteTable("grants", {
   scopeJson: text("scope_json").notNull(), // provider-specific scope
   spendCapCents: integer("spend_cap_cents"),
   spentCents: real("spent_cents").notNull().default(0),
+  rateLimitPerMin: integer("rate_limit_per_min"), // null = unlimited
   expiresAt: integer("expires_at"), // epoch ms; null = no expiry
   revokedAt: integer("revoked_at"),
   createdAt: integer("created_at").notNull(),

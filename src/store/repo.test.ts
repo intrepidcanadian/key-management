@@ -8,7 +8,11 @@ import {
   revokeGrant,
   addSpend,
   hashToken,
+  rotateKey,
+  getKey,
+  sealedFromRow,
 } from "./repo.js";
+import { openApiKey } from "../crypto/cipher.js";
 
 const master = () => new Uint8Array(randomBytes(32));
 
@@ -61,6 +65,31 @@ describe("store/repo", () => {
     expect(revokeGrant(db, token)).toBe(true);
     expect(findGrantByToken(db, token)?.revokedAt).toBeTypeOf("number");
     expect(revokeGrant(db, grant.id)).toBe(true);
+  });
+
+  it("rotates a key in place without breaking grants", () => {
+    const m = master();
+    const db = getTestDb();
+    const key = addKey(db, { provider: "openai", label: "t", plaintext: "sk-old", masterKey: m });
+    const { token } = createGrant(db, {
+      keyId: key.id,
+      granteeLabel: "bot",
+      granteeType: "agent",
+      scope: { models: ["*"] },
+    });
+
+    expect(rotateKey(db, key.id, "sk-new", m)).toBe(true);
+
+    // Grant still resolves to the same key id (unchanged).
+    expect(findGrantByToken(db, token)?.keyId).toBe(key.id);
+    // The stored secret is now the new one.
+    const row = getKey(db, key.id)!;
+    expect(openApiKey(sealedFromRow(row), m)).toBe("sk-new");
+    expect(row.rotatedAt).toBeTypeOf("number");
+  });
+
+  it("rotate returns false for an unknown key", () => {
+    expect(rotateKey(getTestDb(), "nope", "x", master())).toBe(false);
   });
 
   it("accumulates spend", () => {

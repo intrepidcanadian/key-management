@@ -11,6 +11,7 @@ import {
   revokeGrant,
   listAudit,
   getKey,
+  rotateKey,
 } from "../store/repo.js";
 import { getProvider, PROVIDERS } from "../providers.js";
 
@@ -41,6 +42,7 @@ program
   .option("--models <list>", "LLM: comma-separated model allowlist (or '*')")
   .option("--cap <cents>", "LLM: spend cap in cents")
   .option("--allow <rule...>", 'REST: "METHOD /path/*" (repeatable)')
+  .option("--rate <n>", "max requests per minute (omit = unlimited)")
   .option("-e, --expires <dur>", "e.g. 1h, 30m, 7d (omit = no expiry)")
   .action((keyId: string, opts) => {
     const db = getDb();
@@ -62,6 +64,7 @@ program
       granteeType: opts.as === "human" ? "human" : "agent",
       scope,
       spendCapCents: opts.cap ? Number(opts.cap) : undefined,
+      rateLimitPerMin: opts.rate ? Number(opts.rate) : undefined,
       expiresAt: opts.expires ? Date.now() + parseDuration(opts.expires) : null,
     });
 
@@ -72,6 +75,19 @@ program
     if (provider.kind === "llm") {
       console.log(`  e.g. OPENAI_BASE_URL=${base}  OPENAI_API_KEY=${token}`);
     }
+  });
+
+program
+  .command("rotate")
+  .description("Replace a key's secret in place — live grants keep working")
+  .argument("<keyId>", "id of the key to rotate")
+  .option("-k, --key <value>", "the new secret (omit to read from stdin — safer)")
+  .action(async (keyId: string, opts: { key?: string }) => {
+    const plaintext = opts.key ?? readFileSync(0, "utf8").trim();
+    if (!plaintext) fail("no key provided");
+    const master = await defaultWrapper().getMasterKey();
+    const ok = rotateKey(getDb(), keyId, plaintext, master);
+    console.log(ok ? "rotated (grants unchanged)" : `no key with id ${keyId}`);
   });
 
 program
