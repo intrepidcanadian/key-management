@@ -54,6 +54,15 @@ echo -n 'sk-new' | npm run cli -- rotate <keyId>   # swap the secret, grants kee
 
 Add `--rate <n>` to `share` to cap a grant at N requests/minute.
 
+### Running the live end-to-end test
+
+`npm test` skips the live test by default. To prove the full real round trip
+(proxy → real LLM → 200 → usage-based spend charged), point it at a throwaway key:
+
+```bash
+KEYVAULT_E2E_KEY=sk-... KEYVAULT_E2E_PROVIDER=openai npm test
+```
+
 ### Agent access (MCP)
 
 Share a key `--as agent`, then point an MCP client at the server. The agent calls a
