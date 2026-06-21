@@ -123,10 +123,12 @@ export interface AuditInput {
   estCostCents?: number;
 }
 
-export function writeAudit(db: DB, input: AuditInput): void {
+/** Returns the new audit row id so cost can be filled in once known (async, post-stream). */
+export function writeAudit(db: DB, input: AuditInput): string {
+  const id = randomUUID();
   db.insert(audit)
     .values({
-      id: randomUUID(),
+      id,
       grantId: input.grantId,
       ts: Date.now(),
       method: input.method,
@@ -137,6 +139,11 @@ export function writeAudit(db: DB, input: AuditInput): void {
       estCostCents: input.estCostCents ?? null,
     })
     .run();
+  return id;
+}
+
+export function updateAuditCost(db: DB, auditId: string, cents: number): void {
+  db.update(audit).set({ estCostCents: cents }).where(eq(audit.id, auditId)).run();
 }
 
 export function listAudit(db: DB, grantId?: string) {

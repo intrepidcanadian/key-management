@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
 
 /**
  * Schema is hosted-ready: `owner_id` exists now (seeded to a single local owner),
@@ -33,7 +33,7 @@ export const grants = sqliteTable("grants", {
   tokenHash: text("token_hash").notNull().unique(), // sha256 hex of the grant token
   scopeJson: text("scope_json").notNull(), // provider-specific scope
   spendCapCents: integer("spend_cap_cents"),
-  spentCents: integer("spent_cents").notNull().default(0),
+  spentCents: real("spent_cents").notNull().default(0),
   expiresAt: integer("expires_at"), // epoch ms; null = no expiry
   revokedAt: integer("revoked_at"),
   createdAt: integer("created_at").notNull(),
@@ -50,7 +50,7 @@ export const audit = sqliteTable("audit", {
   upstreamStatus: integer("upstream_status"),
   bytesIn: integer("bytes_in"),
   bytesOut: integer("bytes_out"),
-  estCostCents: integer("est_cost_cents"),
+  estCostCents: real("est_cost_cents"),
 });
 
 export type KeyRow = typeof keys.$inferSelect;

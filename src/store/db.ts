@@ -60,7 +60,7 @@ export function initSchema(raw: Database.Database): void {
       token_hash      TEXT NOT NULL UNIQUE,
       scope_json      TEXT NOT NULL,
       spend_cap_cents INTEGER,
-      spent_cents     INTEGER NOT NULL DEFAULT 0,
+      spent_cents     REAL NOT NULL DEFAULT 0,
       expires_at      INTEGER,
       revoked_at      INTEGER,
       created_at      INTEGER NOT NULL
@@ -77,7 +77,7 @@ export function initSchema(raw: Database.Database): void {
       upstream_status INTEGER,
       bytes_in        INTEGER,
       bytes_out       INTEGER,
-      est_cost_cents  INTEGER
+      est_cost_cents  REAL
     );
     CREATE INDEX IF NOT EXISTS idx_audit_grant ON audit(grant_id);
   `);

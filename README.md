@@ -12,16 +12,19 @@ moment. Revoke = one command, and their next request bounces. Every call is audi
 
 ## Status: v1 scaffold (local-first)
 
-Built and tested:
+Built and tested (54 tests):
 - **`crypto/`** — envelope encryption (XChaCha20-Poly1305), master key from the OS keychain.
 - **`scope/`** — per-provider scope matchers: REST (method + path, normalization-hardened)
   and LLM (model allowlist + spend cap). Pure functions, heavily tested.
 - **`store/`** — SQLite + Drizzle; grant tokens stored hashed.
 - **`proxy/`** — Hono proxy: token → grant → live? → scope → spend → decrypt → forward → audit.
+- **`pricing/`** — usage-based spend accounting (OpenAI + Anthropic, streaming + not);
+  the spend cap is enforced and charged. Usage-less calls charge a fallback, never 0.
 - **`cli/`** — `add-key`, `share`, `revoke`, `list`, `audit`.
+- **`mcp/`** — agent surface: a stdio MCP server that's a thin client of the proxy.
 
-Stubbed / deferred: MCP agent surface (`mcp/`), hosted multi-tenant + non-dev web
-console, cloud KMS (`KmsWrapper`). See the design doc and `TODOS.md`.
+Deferred: hosted multi-tenant + non-dev web console, cloud KMS (`KmsWrapper`),
+per-grant rate limiting, key rotation. See the design doc and `TODOS.md`.
 
 ## Quickstart
 
@@ -42,7 +45,19 @@ npm run proxy                 # start the proxy on :8787
 #   OPENAI_BASE_URL=http://localhost:8787/openai  OPENAI_API_KEY=<grant token>
 
 npm run cli -- revoke <grantId|token>   # kill switch
-npm run cli -- audit <grantId>          # what they did
+npm run cli -- audit <grantId>          # what they did (with per-call cost)
+```
+
+### Agent access (MCP)
+
+Share a key `--as agent`, then point an MCP client at the server. The agent calls a
+`request` tool and never sees the key or the token:
+
+```bash
+npm run cli -- share <keyId> --to my-bot --as agent --models 'claude-opus-4-8' --cap 1000
+KEYVAULT_BASE_URL=http://localhost:8787/anthropic \
+KEYVAULT_GRANT_TOKEN=<grant token> \
+npm run mcp        # stdio MCP server exposing the `request` tool
 ```
 
 Master key: on macOS it lives in the Keychain (created on first use). Elsewhere, set

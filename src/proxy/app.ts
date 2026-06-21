@@ -7,10 +7,14 @@ import {
   getKey,
   sealedFromRow,
   writeAudit,
+  updateAuditCost,
+  addSpend,
 } from "../store/repo.js";
+import type { DB as Db } from "../store/db.js";
 import { getProvider } from "../providers.js";
 import { RestMatcher, type RestScope } from "../scope/rest.js";
 import { LlmMatcher, checkSpend, type LlmScope } from "../scope/llm.js";
+import { accountCost } from "../pricing.js";
 
 const restMatcher = new RestMatcher();
 const llmMatcher = new LlmMatcher();
@@ -61,13 +65,16 @@ export function createApp(db: DB, wrapper: KeyWrapper): Hono {
 
     // ---- scope gate ----
     const scope = JSON.parse(grant.scopeJson);
+    const model =
+      provider.kind === "llm"
+        ? extractModel(bodyBuf, c.req.header("content-type"))
+        : undefined;
     if (provider.kind === "llm") {
-      const model = extractModel(bodyBuf, c.req.header("content-type"));
       const dec = llmMatcher.matches({ method, path: upstreamPath, model }, scope as LlmScope);
       if (!dec.allow) return c.json({ error: `scope denied: ${dec.reason}` }, 403);
 
-      // Soft spend cap: gate on running total before forwarding. TODO: after the
-      // call, parse `usage` and addSpend() the real cost (see TODOS.md tripwire).
+      // Soft spend cap: gate on running total before forwarding. The real cost is
+      // added after the response is drained (see the tee below).
       const spend = checkSpend(grant.spentCents, 0, grant.spendCapCents ?? undefined);
       if (!spend.allow) return c.json({ error: "spend cap reached" }, 402);
     } else {
@@ -98,7 +105,7 @@ export function createApp(db: DB, wrapper: KeyWrapper): Hono {
     }
 
     // Metadata only — never the body.
-    writeAudit(db, {
+    const auditId = writeAudit(db, {
       grantId: grant.id,
       method,
       path: upstreamPath,
@@ -106,13 +113,43 @@ export function createApp(db: DB, wrapper: KeyWrapper): Hono {
       bytesIn: bodyBuf?.byteLength,
     });
 
-    // Stream the upstream response straight back (SSE-safe).
     const respHeaders = new Headers(upstream.headers);
     respHeaders.delete("content-encoding"); // fetch already decoded
+
+    // For LLM calls on a 2xx, tee the stream: one copy goes to the grantee, the
+    // other is drained to read `usage` and charge the grant. The grantee is never
+    // blocked on accounting. Spend is soft by one in-flight call by design.
+    if (provider.kind === "llm" && upstream.body && upstream.ok) {
+      const [toClient, toMeter] = upstream.body.tee();
+      void meterCost(db, grant.id, auditId, model, toMeter);
+      return new Response(toClient, { status: upstream.status, headers: respHeaders });
+    }
+
+    // Stream straight back (SSE-safe) for REST and non-2xx.
     return new Response(upstream.body, { status: upstream.status, headers: respHeaders });
   });
 
   return app;
+}
+
+/** Drain the metering branch, compute cost from usage, charge the grant + audit row. */
+export async function meterCost(
+  db: Db,
+  grantId: string,
+  auditId: string,
+  model: string | undefined,
+  stream: ReadableStream<Uint8Array>,
+): Promise<void> {
+  try {
+    const text = await new Response(stream).text();
+    const cents = accountCost(model, text);
+    addSpend(db, grantId, cents);
+    updateAuditCost(db, auditId, cents);
+  } catch {
+    // Drain failed (client aborted, etc.): charge the fallback so usage-less calls
+    // still cost something, per the eng-review anti-dodge rule.
+    addSpend(db, grantId, accountCost(model, ""));
+  }
 }
 
 function bearer(h: string | undefined): string | null {
