@@ -25,6 +25,16 @@ export const PROVIDERS: Record<string, Provider> = {
     kind: "llm",
     authHeader: "x-api-key",
   },
+  qwen: {
+    // Alibaba Model Studio, OpenAI-compatible mode. The grantee calls
+    // /v1/chat/completions; we forward to <base>/v1/chat/completions.
+    name: "qwen",
+    baseUrl:
+      "https://ws-czwjlzd00zfipyzp.ap-southeast-1.maas.aliyuncs.com/compatible-mode",
+    kind: "llm",
+    authHeader: "authorization",
+    authScheme: "Bearer ",
+  },
   stripe: {
     name: "stripe",
     baseUrl: "https://api.stripe.com",

@@ -28,7 +28,29 @@ Built and tested (54 tests):
 Deferred: hosted multi-tenant + non-dev web console, cloud KMS (`KmsWrapper`),
 shared rate-limit state for multi-instance, live-LLM e2e test. See the design doc and `TODOS.md`.
 
-## Quickstart
+## Dashboard
+
+A local web UI to manage keys and grants (add/rotate keys, create/revoke grants with
+scope + spend cap + rate limit + expiry, watch the audit log live). It talks to a
+localhost-only admin API; it never displays a stored secret, and grant tokens are
+shown exactly once.
+
+```bash
+npm install
+npm --prefix web install
+npm --prefix web run build     # build the dashboard into web/dist
+npm start                      # proxy :8787 + admin/dashboard :8788
+# open http://localhost:8788
+```
+
+Dev mode with hot reload: run `npm start` in one terminal and `npm run web:dev` in
+another, then open the Vite URL (it proxies /api to :8788).
+
+First provider wired up: **Qwen (Alibaba Model Studio)**, OpenAI-compatible. Add your
+key in the UI, share a grant scoped to `qwen-plus`, and point any OpenAI client at
+`http://localhost:8787/qwen` with the grant token.
+
+## Quickstart (CLI)
 
 ```bash
 npm install

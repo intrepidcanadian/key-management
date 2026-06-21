@@ -23,6 +23,10 @@ export const PRICING: Record<string, Rate> = {
   "gpt-4o": { inPer1k: 0.25, outPer1k: 1.0 },
   "claude-opus-4-8": { inPer1k: 0.5, outPer1k: 2.5 },
   "claude-sonnet-4-6": { inPer1k: 0.3, outPer1k: 1.5 },
+  // Qwen (Alibaba) — approximate; edit per your contract.
+  "qwen-plus": { inPer1k: 0.04, outPer1k: 0.12 },
+  "qwen-max": { inPer1k: 0.16, outPer1k: 0.64 },
+  "qwen-turbo": { inPer1k: 0.005, outPer1k: 0.02 },
 };
 
 /** Charged when an LLM call completes but usage can't be parsed. Never 0. */
