@@ -199,6 +199,7 @@ keyvault rotate <keyId> [--key <secret>]                   # swap the secret, gr
 keyvault revoke <grantId|token>                            # kill switch
 keyvault list                                              # keys + grants
 keyvault audit [grantId]                                   # request history + cost
+keyvault where                                             # show vault/master-key/mcp paths + what's stored
 ```
 
 Run as `npm run cli -- <command>`, or `npm run build && npm link` for a global `keyvault`.

@@ -1,16 +1,20 @@
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
 import { mkdirSync } from "node:fs";
 import * as schema from "./schema.js";
 
 export type DB = ReturnType<typeof drizzle<typeof schema>>;
 
-function dbPath(): string {
-  const dir = process.env.KEYVAULT_HOME ?? join(homedir(), ".keyvault");
-  mkdirSync(dir, { recursive: true });
-  return join(dir, "vault.sqlite");
+/** Vault directory (no side effects). Override with KEYVAULT_HOME. */
+export function vaultHome(): string {
+  return process.env.KEYVAULT_HOME ?? join(homedir(), ".keyvault");
+}
+
+/** Vault DB path (no side effects). Override with KEYVAULT_DB. */
+export function vaultDbPath(): string {
+  return process.env.KEYVAULT_DB ?? join(vaultHome(), "vault.sqlite");
 }
 
 let _db: DB | null = null;
@@ -18,7 +22,9 @@ let _raw: Database.Database | null = null;
 
 export function getDb(): DB {
   if (_db) return _db;
-  _raw = new Database(process.env.KEYVAULT_DB ?? dbPath());
+  const path = vaultDbPath();
+  mkdirSync(dirname(path), { recursive: true });
+  _raw = new Database(path);
   _raw.pragma("journal_mode = WAL");
   _raw.pragma("foreign_keys = ON");
   initSchema(_raw);

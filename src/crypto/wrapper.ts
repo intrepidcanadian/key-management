@@ -99,6 +99,39 @@ export class KmsWrapper implements KeyWrapper {
   }
 }
 
+export interface MasterKeyStatus {
+  source: "env" | "keychain" | "none";
+  location: string;
+  present: boolean;
+}
+
+/** Where the master key would come from, and whether it exists yet (no prompt). */
+export function masterKeyStatus(): MasterKeyStatus {
+  if (process.env.KEYVAULT_MASTER_KEY) {
+    return { source: "env", location: "KEYVAULT_MASTER_KEY", present: true };
+  }
+  if (process.platform === "darwin") {
+    let present = false;
+    try {
+      // Attribute lookup only (no -w) → no secret read, no keychain prompt.
+      execFileSync(
+        "security",
+        ["find-generic-password", "-s", KEYCHAIN_SERVICE, "-a", KEYCHAIN_ACCOUNT],
+        { stdio: ["ignore", "ignore", "ignore"] },
+      );
+      present = true;
+    } catch {
+      present = false;
+    }
+    return {
+      source: "keychain",
+      location: `macOS Keychain (service=${KEYCHAIN_SERVICE}, account=${KEYCHAIN_ACCOUNT})`,
+      present,
+    };
+  }
+  return { source: "none", location: "set KEYVAULT_MASTER_KEY", present: false };
+}
+
 /** Pick a wrapper: explicit env override wins, else keychain on macOS. */
 export function defaultWrapper(): KeyWrapper {
   if (process.env.KEYVAULT_MASTER_KEY) return new EnvMasterKey();

@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { readFileSync } from "node:fs";
-import { getDb } from "../store/db.js";
-import { defaultWrapper } from "../crypto/wrapper.js";
+import { readFileSync, existsSync } from "node:fs";
+import { getDb, vaultDbPath } from "../store/db.js";
+import { defaultWrapper, masterKeyStatus } from "../crypto/wrapper.js";
+import { configPath } from "../mcp/config.js";
 import {
   addKey,
   listKeys,
@@ -124,6 +125,27 @@ program
   .action((grantId?: string) => {
     for (const a of listAudit(getDb(), grantId)) {
       console.log(`  ${new Date(a.ts).toISOString()}  ${a.method} ${a.path}  -> ${a.upstreamStatus ?? "-"}`);
+    }
+  });
+
+program
+  .command("where")
+  .description("Show where the vault, master key, and MCP config live")
+  .action(() => {
+    const db = vaultDbPath();
+    const cfg = configPath();
+    const mk = masterKeyStatus();
+    const mark = (p: string) => (existsSync(p) ? "exists" : "not created yet");
+
+    console.log(`vault db:    ${db}  (${mark(db)})`);
+    console.log(`master key:  ${mk.location}  (${mk.present ? "present" : "missing"})`);
+    console.log(`mcp config:  ${cfg}  (${mark(cfg)})`);
+
+    if (existsSync(db)) {
+      const d = getDb();
+      console.log(`stored:      ${listKeys(d).length} keys, ${listGrants(d).length} grants`);
+    } else {
+      console.log("stored:      nothing yet — add a key to create the vault");
     }
   });
 
